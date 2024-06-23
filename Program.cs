@@ -30,24 +30,15 @@ namespace Autofarm
             // Основной цикл фарминга
             while (true)
             {
-                // for (int gameIndex = 0; gameIndex < games.Count; gameIndex++)
-                // {
-                //     IGame game = games[gameIndex];
-                //     tasks.Add(game.MainLoop());
-                // }
+                for (int gameIndex = 0; gameIndex < games.Count; gameIndex++)
+                {
+                    IGame game = games[gameIndex];
+                    tasks.Add(game.MainLoop());
+                }
 
-                IGame game1 = games[0];
-                Task task1 = game1.MainLoop();
+                await Task.WhenAll(tasks);
 
-                IGame game2 = games[1];
-                Task task2 = game2.MainLoop();
-
-                await task1;
-                await task2;
-
-                // await Task.WhenAny(tasks);
-
-                // tasks.Clear();
+                tasks.Clear();
             }
         }
     }

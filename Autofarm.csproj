@@ -17,6 +17,9 @@
   <ItemGroup>
     <Folder Include="BLUM\" />
     <Folder Include="CyberFinancies\" />
+    <Folder Include="Catizen\" />
+    <Folder Include="Gamety\" />
+    <Folder Include="YesCoin\" />
   </ItemGroup>
 
 </Project>
