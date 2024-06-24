@@ -1,7 +1,37 @@
 ﻿namespace Autofarm.Сommon
 {
+    public class CheckTokenTasks
+    {
+        public CheckTokenTasks(string iD_TOKEN, int cOUNT_TASKS)
+        {
+            ID_TOKEN = iD_TOKEN;
+            COUNT_TASKS = cOUNT_TASKS;
+        }
+
+        /// <summary>
+        /// Идентификатор токена
+        /// </summary>
+        public string ID_TOKEN { get; set; }
+
+        /// <summary>
+        /// Максимальное количество задач в классе
+        /// </summary>
+        public int COUNT_TASKS { get; set; }
+
+        /// <summary>
+        /// Сколько ждать
+        /// </summary>
+        public int WAIT_SECONDS { get; set; }
+
+    }
+
     public interface IGame
     {
+        /// <summary>
+        /// Токены и проверка их занятости (нельзя создать еще одно действие, если токен уже имеется)
+        /// </summary>
+        List<CheckTokenTasks> checkTokenTasksComplete { get; set; }
+
         /// <summary>
         /// Основное действие
         /// </summary>
@@ -40,6 +70,6 @@
         /// <summary>
         /// Основной цикл игры (для нескольких аккаунтов/окон)
         /// </summary>
-        Task MainLoop();
+        void MainLoop(List<Task> MainTasks);
     }
 }

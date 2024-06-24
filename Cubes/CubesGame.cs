@@ -1,11 +1,10 @@
 ﻿using System.Text.Json;
-using System.Reflection;
 
 using Autofarm.Сommon;
 using Autofarm.Сommon.DataBase;
 using Autofarm.Cubes.Responses;
 using System.Net.Http.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.InteropServices;
 
 namespace Autofarm.Cubes
 {
@@ -13,7 +12,7 @@ namespace Autofarm.Cubes
     ### Запуск майнера возможен без какого-то ни было запуска самого окна
     ### нужен только токен самого пользователя в игре
     */
-    public class EngineGame : IGame
+    public class CubesGame : IGame
     {
         private static readonly HttpClient client = new HttpClient();
         private List<BaseHeader> headers;
@@ -21,19 +20,26 @@ namespace Autofarm.Cubes
         private List<BaseUrl> urls;
         private GameContext gameDB;
         private string nameGame;
+        public List<CheckTokenTasks> checkTokenTasksComplete { get; set; }
 
-        public EngineGame(string nameGame, GameContext gameDB)
+        public CubesGame(string nameGame, GameContext gameDB)
         {
             this.nameGame = nameGame;
             this.gameDB = gameDB;
             headers = new List<BaseHeader>();
             tokens = new List<BaseToken>();
+            checkTokenTasksComplete = new List<CheckTokenTasks>();
 
             LoadRecources();
         }
 
         public async Task PlayGame(string url, BaseToken token, BaseHeader header)
         {
+            // Добавляем в проверку
+            // Добавляем в проверку
+            // Добавляем в проверку
+            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN = false;
+
             // Создаем необходимый header
             client.DefaultRequestHeaders.Clear();
             // Сколько нужно секунд для повторного запроса
@@ -55,12 +61,29 @@ namespace Autofarm.Cubes
             };
             JsonContent content = JsonContent.Create(values);
             // Отсылаем запрос
-            var response = await client.PostAsync(url, content);
+            HttpResponseMessage response = null;
+            // Отсылаем запрос
+            try
+            {
+                response = await client.PostAsync(url, content);
+            }
+            catch (TaskCanceledException ex)
+            {
+                Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Timeout 100 seconds -- {ex.Task}");
+                waitSeconds = new Random().Next(900, 1100);
+            }
+
+            // Проверка ответа
+            if (response == null)
+            {
+                await Task.Delay(waitSeconds);
+                Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"response us null!");
+            }
             // Проверка ответа
             if (response.IsSuccessStatusCode)
             {
                 PlayGameResponse? data = await response.Content.ReadFromJsonAsync<PlayGameResponse>();
-
+            
                 if (data != null && data.mystery_ids.Length == 0)
                 {
                     waitSeconds = new Random().Next(400, 700);
@@ -72,13 +95,24 @@ namespace Autofarm.Cubes
                 else
                 {
                     Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} Data response is null!");
+                    waitSeconds = new Random().Next(600, 900);
                 }
             }
             else
             {
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode} phrase:{response.ReasonPhrase}");
+                waitSeconds = new Random().Next(900, 1100);
             }
+
+            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().COUNT_TASKS++;
+
             await Task.Delay(waitSeconds);
+            // Console.WriteLine("Cubes 1 sec");
+
+            // Удаляем из проверки
+            // Удаляем из проверки
+            // Удаляем из проверки
+            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN = true;
         }
 
         public async Task GetInfo(string url, BaseToken token, BaseHeader header)
@@ -108,27 +142,30 @@ namespace Autofarm.Cubes
             urls = gameDB.urls.ToList();
         }
 
-        public async Task MainLoop()
+        public void MainLoop(List<Task> MainTasks)
         {
             string URL = "";
-
-            List<Task> tasks = new List<Task>();
 
             for (int accountIndex = 0; accountIndex < tokens.Count; accountIndex++)
             {
                 // Майнинг кубов
                 URL = @"https://server.questioncube.xyz/game/mined";
                 BaseToken token = tokens[accountIndex];
-                BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
-                BaseHeader header = url.BaseHeader;
-                Task task = PlayGame(URL, token, header);
-                tasks.Add(task);
+
+                // Добавляем в проверку, если ключа нет
+                if (!checkTokenTasksComplete.Select(tok => tok.ID_TOKEN).Contains(token.Data))
+                {
+                    checkTokenTasksComplete.Add(new CheckTokenTasks(token.Data, 0, true));
+                }
+
+                if (checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN)
+                {
+                    BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
+                    BaseHeader header = url.BaseHeader;
+                    Task task = PlayGame(URL, token, header);
+                    MainTasks.Add(task);
+                }
             }
-
-            await Task.WhenAll(tasks);
-
-            tasks.Clear();
-
         }
     }
 }

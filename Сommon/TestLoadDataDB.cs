@@ -206,8 +206,8 @@ namespace Autofarm.Сommon
 
             // Токены
             BaseToken cubesToken1 = new BaseToken { Data = "ce0427410b069b52ae382b30738befbce56a4cb4d73bda60bc8f7ef8efc780f7", BaseGameInfo = cubes };
-            BaseToken cubesToken2 = new BaseToken { Data = "b6c0d717144fce4066610e309763ce47044d4450c64c4fa3df3ba8cea89efeeb", BaseGameInfo = cubes };
-            BaseToken cubesToken3 = new BaseToken { Data = "b5ef0c737964c8c12fecccc0a09f7ffef9972b9063f73a94805928586dab1ddd", BaseGameInfo = cubes };
+            BaseToken cubesToken2 = new BaseToken { Data = "43a0d1aa226ca9b8544e4d140a8f6891429f4311b63d035e87fdc07436a5cb9c", BaseGameInfo = cubes };
+            BaseToken cubesToken3 = new BaseToken { Data = "a6d7c196c3162af0821358720892d060bb19c20eac943d850771a68b5d2472f0", BaseGameInfo = cubes };
             
             BaseToken pocketfiToken1 = new BaseToken { Data = "query_id=AAEL7T0VAAAAAAvtPRUDL6NZ&user=%7B%22id%22%3A356379915%2C%22first_name%22%3A%22Colhiru%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22colhiru%22%2C%22language_code%22%3A%22ru%22%2C%22is_premium%22%3Atrue%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1718982968&hash=4f6f7845ed81452b4c53220b1129220500eba8d7e583e36530a860ce5370fad0", BaseGameInfo = pocketfi };
             BaseToken pocketfiToken2 = new BaseToken { Data = "query_id=AAHYqLQxAAAAANiotDG_xTOf&user=%7B%22id%22%3A833923288%2C%22first_name%22%3A%22Yutizo%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22yutizo%22%2C%22language_code%22%3A%22ru%22%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1719050763&hash=d6ea91ecb058f54329f42baf4474622dd31c16d2be9d0d6cf32fe72268f8569a", BaseGameInfo = pocketfi };

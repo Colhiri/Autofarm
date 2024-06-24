@@ -31,7 +31,7 @@ namespace Autofarm.Сommon
 
         public void Log(LogLevel level, string nameGame, string message)
         {
-            Console.WriteLine($"[{DateTime.Now.ToLongTimeString()}] {level}: {nameGame} {message}");
+            Console.WriteLine($"[{DateTime.Now.ToLongTimeString()}] {nameGame} {level}: {message}");
         }
     }
 }
