@@ -12,25 +12,21 @@ namespace Autofarm
     public class TaskWithTimers
     {
         public Task task;
-        int timerSeconds;
-        public bool TaskReady => timerSeconds <= 0;
+        DateTime endTimeStamp;
+        public bool TaskReady => endTimeStamp <= DateTime.Now;
 
-        public TaskWithTimers(Task task, int timerSeconds)
+        public TaskWithTimers(Task task, DateTime endTimeStamp)
         {
             this.task = task;
-            this.timerSeconds = timerSeconds;
+            this.endTimeStamp = endTimeStamp;
         }
 
-        public void Dicrement()
-        {
-            timerSeconds--;
-        }
     }
 
     internal class Program
     {
         public static List<TaskWithTimers> MainTasks = new List<TaskWithTimers>();
-        public static int MAX_COUNT_TASKS_ON_EACH_TOKEN = 5;
+        public static int MAX_COUNT_TASKS_ON_EACH_TOKEN = 1;
         private static List<IGame> games;
 
         async static Task Main(string[] args)
@@ -56,65 +52,25 @@ namespace Autofarm
 
             while (true)
             {
-                if (games[0].checkTokenTasksComplete.Select(tok => tok.COUNT_TASKS).First() < MAX_COUNT_TASKS_ON_EACH_TOKEN)
+                foreach (IGame game in games)
                 {
-                    TaskWithTimers task10 = new TaskWithTimers(games[0].TimeEvent10(), 5);
-                    MainTasks.Add(task10);
-                }
-                if (games[1].checkTokenTasksComplete.Select(tok => tok.COUNT_TASKS).First() < MAX_COUNT_TASKS_ON_EACH_TOKEN)
-                {
-                    TaskWithTimers task20 = new TaskWithTimers(games[1].TimeEvent20(), 100);
-                    MainTasks.Add(task20);
+                    List<TaskWithTimers> newTasks = await game.MainLoop();
+
+                    if (newTasks.Count > 0)
+                    {
+                        MainTasks.AddRange(newTasks);
+                    }
                 }
 
                 List<Task> readyTasks = MainTasks.Where(t => t.TaskReady).Select(t => t.task).ToList();
 
-                await Task.WhenAll(readyTasks);
-
-                readyTasks.Clear();
-
-                MainTasks.RemoveAll(t => t.task.IsCompleted);
-
-                MainTasks.ForEach(t => t.Dicrement());
-
-                Thread.Sleep(100);
-            }
-        }
-
-        private static async Task MainLoopGames()
-        {
-            
-            // Основной цикл фарминга
-            while (true)
-            {
-                MainTasks.RemoveAll(task => task.IsCompleted);
-
-                Console.WriteLine($"Current count tasks = {MainTasks.Count}");
-
-                bool check1 = games[0].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true) || 
-                    games[0].checkTokenTasksComplete.Count == 0 ||
-                    games[0].checkTokenTasksComplete.Select(tok => tok.COUNT_TASKS).First() < MAX_COUNT_TASKS_ON_EACH_TOKEN;
-
-                bool check2 = games[1].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true) || 
-                    games[1].checkTokenTasksComplete.Count == 0 || 
-                    games[1].checkTokenTasksComplete.Select(tok => tok.COUNT_TASKS).First() < MAX_COUNT_TASKS_ON_EACH_TOKEN;
-
-                if (check1)
+                if (readyTasks.Count > 0)
                 {
-                    games[0].MainLoop(MainTasks);
-                }
-                if (check2)
-                {
-                    games[1].MainLoop(MainTasks);
-                }
+                    await Task.WhenAll(readyTasks);
 
-                check1 = games[0].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true);
-                check2 = games[1].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true);
+                    readyTasks.Clear();
 
-                while (check1 == false && check2 == false)
-                {
-                    check1 = games[0].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true);
-                    check2 = games[1].checkTokenTasksComplete.Select(tok => tok.NO_LOCK_TOKEN).Contains(true);
+                    MainTasks.RemoveAll(t => t.task.IsCompleted);
                 }
             }
         }

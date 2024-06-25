@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Json;
-using System.Text.Json;
 using Autofarm.PocketFI.Responses;
 using Autofarm.Сommon;
 using Autofarm.Сommon.DataBase;
@@ -25,6 +24,8 @@ namespace Autofarm.PocketFI
         private GameContext gameDB;
         private string nameGame;
         public List<CheckTokenTasks> checkTokenTasksComplete { get; set; }
+        public CheckTokenTasks currentCheck { get; set; } = null;
+
 
         public PocketFIGame(string nameGame, GameContext gameDB)
         {
@@ -37,17 +38,30 @@ namespace Autofarm.PocketFI
             LoadRecources();
         }
 
-        public async Task PlayGame(string url, BaseToken token, BaseHeader header)
+        public async Task PlayGame(int waitMilliSeconds)
         {
-            // Добавляем в проверку
-            // Добавляем в проверку
-            // Добавляем в проверку
-            CheckTokenTasks currentCheck = checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First();
+            await Task.Delay(waitMilliSeconds);
+            // Console.WriteLine("PocketFI 10 sec");
+        }
 
+        public void GetCurrentToken(BaseToken token)
+        {
+            // Добавляем в проверку, если ключа нет
+            if (!checkTokenTasksComplete.Select(tok => tok.ID_TOKEN).Contains(token.Data))
+            {
+                currentCheck = new CheckTokenTasks(token.Data);
+                checkTokenTasksComplete.Add(currentCheck);
+            }
+            else
+            {
+                currentCheck = checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First();
+            }
+        }
+
+        public async Task<int> GetInfo(string url, BaseToken token, BaseHeader header)
+        {
             // Создаем необходимый header
             client.DefaultRequestHeaders.Clear();
-            // Сколько нужно секунд для повторного запроса
-            int waitSeconds = new Random().Next(120000, 160000);
             // Особенность POCKET FI
             // Особенность POCKET FI
             // Особенность POCKET FI
@@ -58,8 +72,12 @@ namespace Autofarm.PocketFI
                 { "", "" }
             };
             var content = new FormUrlEncodedContent(values);
-            
+
             HttpResponseMessage response = null;
+
+            // Сколько нужно секунд для повторного запроса
+            int waitMilliSeconds = new Random().Next(120000, 160000);
+
             // Отсылаем запрос
             try
             {
@@ -68,19 +86,19 @@ namespace Autofarm.PocketFI
             catch (TaskCanceledException ex)
             {
                 Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Timeout 100 seconds -- {ex.Task}");
-                waitSeconds = new Random().Next(30000, 60000);
+                waitMilliSeconds = new Random().Next(30000, 60000);
             }
 
             // Проверка ответа
             if (response == null)
             {
-                waitSeconds = new Random().Next(30000, 60000);
+                waitMilliSeconds = new Random().Next(30000, 60000);
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"response us null!");
             }
             if (response.IsSuccessStatusCode)
             {
                 PlayGameResponse? data = await response.Content.ReadFromJsonAsync<PlayGameResponse>();
-            
+
                 if (data != null)
                 {
                     UserMining? result = data.userMining as UserMining;
@@ -89,25 +107,16 @@ namespace Autofarm.PocketFI
                 else
                 {
                     Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} Data response is null!");
-                    waitSeconds = new Random().Next(60000, 120000);
+                    waitMilliSeconds = new Random().Next(60000, 120000);
                 }
             }
             else
             {
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode} phrase:{response.ReasonPhrase}");
-                waitSeconds = new Random().Next(9000, 11000); ;
+                waitMilliSeconds = new Random().Next(9000, 11000); ;
             }
 
-            currentCheck.COUNT_TASKS++;
-
-            await Task.Delay(waitSeconds);
-            // Console.WriteLine("PocketFI 10 sec");
-            currentCheck.COUNT_TASKS--;
-        }
-
-        public async Task GetInfo(string url, BaseToken token, BaseHeader header)
-        {
-            throw new NotImplementedException();
+            return waitMilliSeconds;
         }
 
         public BaseToken RefreshToken(string url, BaseHeader header)
@@ -122,40 +131,39 @@ namespace Autofarm.PocketFI
 
         public void LoadRecources()
         {
-            // Грузим заголовки
-            headers = gameDB.headers.ToList();
-
             // Грузим все токены
             tokens = gameDB.tokens.Where(token => token.BaseGameInfo.NameGame == nameGame).ToList();
-
             // Грузим все действия (URL и идентификатор заголовка)
-            urls = gameDB.urls.ToList();
+            urls = gameDB.urls.Where(url => url.BaseGameInfo.NameGame == nameGame).ToList();
+            // Грузим заголовки
+            headers = urls.Select(header => header.BaseHeader).ToList();
         }
 
-        public void MainLoop(List<Task> MainTasks)
+        public async Task<List<TaskWithTimers>> MainLoop()
         {
             string URL = "";
+
+            List<TaskWithTimers> loopTasks = new List<TaskWithTimers>();
 
             for (int accountIndex = 0; accountIndex < tokens.Count; accountIndex++)
             {
                 URL = @"https://bot.pocketfi.org/mining/claimMining";
                 BaseToken token = tokens[accountIndex];
+                BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
+                BaseHeader header = url.BaseHeader;
 
-                // Добавляем в проверку, если ключа нет
-                if (!checkTokenTasksComplete.Select(tok => tok.ID_TOKEN).Contains(token.Data))
-                {
-                    checkTokenTasksComplete.Add(new CheckTokenTasks(token.Data, 0, true));
-                }
+                GetCurrentToken(token);
 
-                if (checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First())
+                if (currentCheck.TIME_END <= DateTime.Now)
                 {
-                    BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
-                    BaseHeader header = url.BaseHeader;
-                    Task task = PlayGame(URL, token, header);
-                    MainTasks.Add(task);
-                    
+                    int resultWait = await GetInfo(URL, token, header);
+                    currentCheck.UpdateTimeStamps(resultWait);
+                    Task task = PlayGame(resultWait);
+                    loopTasks.Add(new TaskWithTimers(task, currentCheck.TIME_END));
                 }
             }
+
+            return loopTasks;
         }
     }
 }

@@ -21,6 +21,7 @@ namespace Autofarm.Cubes
         private GameContext gameDB;
         private string nameGame;
         public List<CheckTokenTasks> checkTokenTasksComplete { get; set; }
+        public CheckTokenTasks currentCheck { get; set; } = null;
 
         public CubesGame(string nameGame, GameContext gameDB)
         {
@@ -33,17 +34,32 @@ namespace Autofarm.Cubes
             LoadRecources();
         }
 
-        public async Task PlayGame(string url, BaseToken token, BaseHeader header)
+        public async Task PlayGame(int waitMilliSeconds)
         {
-            // Добавляем в проверку
-            // Добавляем в проверку
-            // Добавляем в проверку
-            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN = false;
+            await Task.Delay(waitMilliSeconds);
+            // Console.WriteLine("PocketFI 10 sec");
+        }
 
+        public void GetCurrentToken(BaseToken token)
+        {
+            // Добавляем в проверку, если ключа нет
+            if (!checkTokenTasksComplete.Select(tok => tok.ID_TOKEN).Contains(token.Data))
+            {
+                currentCheck = new CheckTokenTasks(token.Data);
+                checkTokenTasksComplete.Add(currentCheck);
+            }
+            else
+            {
+                currentCheck = checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First();
+            }
+        }
+
+        public async Task<int> GetInfo(string url, BaseToken token, BaseHeader header)
+        {
             // Создаем необходимый header
             client.DefaultRequestHeaders.Clear();
             // Сколько нужно секунд для повторного запроса
-            int waitSeconds = new Random().Next(900, 1100);
+            int waitMilliSeconds = new Random().Next(900, 1100);
             // Ошибки при работе сериализатора
             HeaderGame currentHeader = JsonSerializer.Deserialize<HeaderGame>(header.Data);
             if (currentHeader == null)
@@ -70,23 +86,22 @@ namespace Autofarm.Cubes
             catch (TaskCanceledException ex)
             {
                 Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Timeout 100 seconds -- {ex.Task}");
-                waitSeconds = new Random().Next(900, 1100);
+                waitMilliSeconds = new Random().Next(900, 1100);
             }
 
             // Проверка ответа
             if (response == null)
             {
-                await Task.Delay(waitSeconds);
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"response us null!");
             }
             // Проверка ответа
             if (response.IsSuccessStatusCode)
             {
                 PlayGameResponse? data = await response.Content.ReadFromJsonAsync<PlayGameResponse>();
-            
+
                 if (data != null && data.mystery_ids.Length == 0)
                 {
-                    waitSeconds = new Random().Next(400, 700);
+                    waitMilliSeconds = new Random().Next(400, 700);
                 }
                 if (data != null)
                 {
@@ -95,29 +110,15 @@ namespace Autofarm.Cubes
                 else
                 {
                     Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} Data response is null!");
-                    waitSeconds = new Random().Next(600, 900);
+                    waitMilliSeconds = new Random().Next(600, 900);
                 }
             }
             else
             {
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode} phrase:{response.ReasonPhrase}");
-                waitSeconds = new Random().Next(900, 1100);
+                waitMilliSeconds = new Random().Next(900, 1100);
             }
-
-            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().COUNT_TASKS++;
-
-            await Task.Delay(waitSeconds);
-            // Console.WriteLine("Cubes 1 sec");
-
-            // Удаляем из проверки
-            // Удаляем из проверки
-            // Удаляем из проверки
-            checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN = true;
-        }
-
-        public async Task GetInfo(string url, BaseToken token, BaseHeader header)
-        {
-            throw new NotImplementedException();
+            return waitMilliSeconds;
         }
 
         public BaseToken RefreshToken(string url, BaseHeader header)
@@ -132,40 +133,39 @@ namespace Autofarm.Cubes
 
         public void LoadRecources()
         {
-            // Грузим заголовки
-            headers = gameDB.headers.ToList();
-
             // Грузим все токены
             tokens = gameDB.tokens.Where(token => token.BaseGameInfo.NameGame == nameGame).ToList();
-
             // Грузим все действия (URL и идентификатор заголовка)
-            urls = gameDB.urls.ToList();
+            urls = gameDB.urls.Where(url => url.BaseGameInfo.NameGame == nameGame).ToList();
+            // Грузим заголовки
+            headers = urls.Select(header => header.BaseHeader).ToList();
         }
 
-        public void MainLoop(List<Task> MainTasks)
+        public async Task<List<TaskWithTimers>> MainLoop()
         {
             string URL = "";
 
+            List<TaskWithTimers> loopTasks = new List<TaskWithTimers>();
+
             for (int accountIndex = 0; accountIndex < tokens.Count; accountIndex++)
             {
-                // Майнинг кубов
                 URL = @"https://server.questioncube.xyz/game/mined";
                 BaseToken token = tokens[accountIndex];
+                BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
+                BaseHeader header = url.BaseHeader;
 
-                // Добавляем в проверку, если ключа нет
-                if (!checkTokenTasksComplete.Select(tok => tok.ID_TOKEN).Contains(token.Data))
-                {
-                    checkTokenTasksComplete.Add(new CheckTokenTasks(token.Data, 0, true));
-                }
+                GetCurrentToken(token);
 
-                if (checkTokenTasksComplete.Where(tok => tok.ID_TOKEN == token.Data).First().NO_LOCK_TOKEN)
+                if (currentCheck.TIME_END <= DateTime.Now)
                 {
-                    BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
-                    BaseHeader header = url.BaseHeader;
-                    Task task = PlayGame(URL, token, header);
-                    MainTasks.Add(task);
+                    int resultWait = await GetInfo(URL, token, header);
+                    currentCheck.UpdateTimeStamps(resultWait);
+                    Task task = PlayGame(resultWait);
+                    loopTasks.Add(new TaskWithTimers(task, currentCheck.TIME_END));
                 }
             }
+
+            return loopTasks;
         }
     }
 }
