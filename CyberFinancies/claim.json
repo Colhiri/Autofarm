@@ -1,0 +1,14 @@
+{
+  "message": {
+    "miningData": {
+      "lastClaimTime": 1719413689,
+      "miningRate": "0.528",
+      "crackTime": 1719456889
+    },
+    "userData": {
+      "balance": "194658",
+      "tokens": "0"
+    }
+  },
+  "code": 200
+}

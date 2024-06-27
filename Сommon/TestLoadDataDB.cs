@@ -173,10 +173,27 @@ namespace Autofarm.Сommon
                                                                 ""User-Agent"": ""Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0""
                                                                 }" };
 
+            BaseHeader cyberFinanciesHeader1 = new BaseHeader { Data = @"{
+                                                                ""Accept"": ""application/json"",
+                                                                ""Accept-Encoding"": ""gzip, deflate, br, zstd"",
+                                                                ""Accept-Language"": ""ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7"",
+                                                                ""Origin"":""https://g.cyberfin.xyz"",
+                                                                ""Priority"":""u=1, i"",
+                                                                ""Referer"":""https://g.cyberfin.xyz/"",
+                                                               ""Sec-Ch-Ua-Mobile"": ""?0"",
+                                                               ""Sec-Ch-Ua-Platform"": ""Windows"",
+                                                                ""Sec-Fetch-Dest"":""empty"",
+                                                                ""Sec-Fetch-Mode"":""cors"",
+                                                                ""Sec-Fetch-Site"":""same-site"",
+                                                                ""Secret-Key"":""cyberfinance"",
+                                                                ""User-Agent"":""Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0""
+                                                                }" };
+
             db.headers.AddRange(cubesHeader1, 
                 pocketfiHeader1, 
                 timetonHeader1, timetonHeader2 , timetonHeader3,
-                fuelminingHeader1, fuelminingHeader2, fuelminingHeader3, fuelminingHeader4
+                fuelminingHeader1, fuelminingHeader2, fuelminingHeader3, fuelminingHeader4,
+                cyberFinanciesHeader1
                 );
 
             // Ссылки
@@ -197,17 +214,21 @@ namespace Autofarm.Сommon
             BaseUrl fuelminingUrl4 = new BaseUrl { URL = "https://mining.fueljetton.com/api/v2/recycle", BaseGameInfo = fuelmining, BaseHeader = fuelminingHeader3 }; // POST
             BaseUrl fuelminingUrl5 = new BaseUrl { URL = "https://mining.fueljetton.com/api/v2/ad", BaseGameInfo = fuelmining, BaseHeader = fuelminingHeader4 }; // POST
 
+            BaseUrl cyberFinanciesUrl1 = new BaseUrl { URL = "https://api.cyberfin.xyz/api/v1/mining/claim", BaseGameInfo = cyberfinancies, BaseHeader = cyberFinanciesHeader1 }; // GET
+            BaseUrl cyberFinanciesUrl2 = new BaseUrl { URL = "https://api.cyberfin.xyz/api/v1/mining/boost/info", BaseGameInfo = cyberfinancies, BaseHeader = cyberFinanciesHeader1 }; // GET
+            BaseUrl cyberFinanciesUrl3 = new BaseUrl { URL = "https://api.cyberfin.xyz/api/v1/game/mining/gamedata", BaseGameInfo = cyberfinancies, BaseHeader = cyberFinanciesHeader1 }; // GET
 
             db.urls.AddRange(cubesUrl1, 
                 pocketfiUrl1, pocketfiUrl2, 
                 timetonUrl1, timetonUrl2, timetonUrl3, timetonUrl4, timetonUrl5,
-                fuelminingUrl1, fuelminingUrl2, fuelminingUrl3, fuelminingUrl4, fuelminingUrl5
+                fuelminingUrl1, fuelminingUrl2, fuelminingUrl3, fuelminingUrl4, fuelminingUrl5,
+                cyberFinanciesUrl1, cyberFinanciesUrl2, cyberFinanciesUrl3
                 );
 
             // Токены
-            BaseToken cubesToken1 = new BaseToken { Data = "ce0427410b069b52ae382b30738befbce56a4cb4d73bda60bc8f7ef8efc780f7", BaseGameInfo = cubes };
-            BaseToken cubesToken2 = new BaseToken { Data = "43a0d1aa226ca9b8544e4d140a8f6891429f4311b63d035e87fdc07436a5cb9c", BaseGameInfo = cubes };
-            BaseToken cubesToken3 = new BaseToken { Data = "a6d7c196c3162af0821358720892d060bb19c20eac943d850771a68b5d2472f0", BaseGameInfo = cubes };
+            BaseToken cubesToken1 = new BaseToken { Data = "bed6854a365563b5e1f582c090c54e89e1de4134c980bee275009a8e230bb49a", BaseGameInfo = cubes };
+            BaseToken cubesToken2 = new BaseToken { Data = "e41b894603be3e37523cb7f3dd2047a5fe97fdd7735943dff669f49777d2922e", BaseGameInfo = cubes };
+            BaseToken cubesToken3 = new BaseToken { Data = "3618ca5b23050085ca36180e1dea8a700efed1d267a810a854af2575aecc4f8c", BaseGameInfo = cubes };
             
             BaseToken pocketfiToken1 = new BaseToken { Data = "query_id=AAEL7T0VAAAAAAvtPRUDL6NZ&user=%7B%22id%22%3A356379915%2C%22first_name%22%3A%22Colhiru%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22colhiru%22%2C%22language_code%22%3A%22ru%22%2C%22is_premium%22%3Atrue%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1718982968&hash=4f6f7845ed81452b4c53220b1129220500eba8d7e583e36530a860ce5370fad0", BaseGameInfo = pocketfi };
             BaseToken pocketfiToken2 = new BaseToken { Data = "query_id=AAHYqLQxAAAAANiotDG_xTOf&user=%7B%22id%22%3A833923288%2C%22first_name%22%3A%22Yutizo%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22yutizo%22%2C%22language_code%22%3A%22ru%22%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1719050763&hash=d6ea91ecb058f54329f42baf4474622dd31c16d2be9d0d6cf32fe72268f8569a", BaseGameInfo = pocketfi };
@@ -217,9 +238,14 @@ namespace Autofarm.Сommon
             BaseToken timetonToken2 = new BaseToken { Data = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEwMDM0OTUsImlhdCI6MTcxOTE3MjYwNX0.lr1xGu_bpV2ShXKBm_TcjAnB5asuIsqrpQZYewenbC8", BaseGameInfo = timeton };
             BaseToken timetonToken3 = new BaseToken { Data = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjg5OTU3NSwiaWF0Ijo", BaseGameInfo = timeton };
 
+            BaseToken cyberFinancies1 = new BaseToken { Data = "Bearer 1NIYzhEPONE7wuS5YYC3sflWwcA5XSjL", BaseGameInfo = cyberfinancies };
+            BaseToken cyberFinancies2 = new BaseToken { Data = "Bearer jzAjE5x1x417rk1FfD2mybCe6P4Um0Ko", BaseGameInfo = cyberfinancies };
+            BaseToken cyberFinancies3 = new BaseToken { Data = "Bearer BGkfTnqoQcQUSGiAiGZzmnXITCUwO3tu", BaseGameInfo = cyberfinancies };
+
             db.tokens.AddRange(cubesToken1, cubesToken2, cubesToken3, 
                 pocketfiToken1, pocketfiToken2, pocketfiToken3,
-                timetonToken1, timetonToken2, timetonToken3
+                timetonToken1, timetonToken2, timetonToken3,
+                cyberFinancies1, cyberFinancies2, cyberFinancies3
 
                 );
 

@@ -2,9 +2,6 @@
 
 using Autofarm.Сommon;
 using Autofarm.Сommon.DataBase;
-using Autofarm.Cubes;
-using Autofarm.PocketFI;
-using System.Threading.Tasks;
 
 namespace Autofarm
 {
@@ -20,7 +17,6 @@ namespace Autofarm
             this.task = task;
             this.endTimeStamp = endTimeStamp;
         }
-
     }
 
     internal class Program
@@ -44,10 +40,11 @@ namespace Autofarm
 
             IGame cubesGame = new Cubes.CubesGame("Cubes", db);
             IGame pocketGame = new PocketFI.PocketFIGame("PocketFI", db);
+            IGame cfGame = new CyberFinancies.CFGame("CyberFinancies", db);
 
             // IGame FuelGame = new  FuelMining.FuelMiningGame("FuelMining", db);
 
-            games = new List<IGame>() { pocketGame, cubesGame };
+            games = new List<IGame>() { pocketGame, cubesGame, cfGame };
             // List<IGame> games = new List<IGame>() { FuelGame };
 
             while (true)

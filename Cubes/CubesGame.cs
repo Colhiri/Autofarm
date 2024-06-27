@@ -88,11 +88,17 @@ namespace Autofarm.Cubes
                 Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Timeout 100 seconds -- {ex.Task}");
                 waitMilliSeconds = new Random().Next(900, 1100);
             }
+            catch (Exception ex)
+            {
+                Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Неуправляемая ошибка -- {ex.GetType()}");
+                waitMilliSeconds = new Random().Next(30000, 60000);
+            }
 
             // Проверка ответа
             if (response == null)
             {
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"response us null!");
+                return waitMilliSeconds;
             }
             // Проверка ответа
             if (response.IsSuccessStatusCode)
@@ -105,7 +111,7 @@ namespace Autofarm.Cubes
                 }
                 if (data != null)
                 {
-                    Logger.GetInstance().Log(LogLevel.Information, nameGame, @$"user:{token.Data} energy:{data.energy} cubes_mined:{data.mined_count}");
+                    Logger.GetInstance().Log(LogLevel.Information, nameGame, @$"user:{token.Data} energy:{data.energy} cubes_mined:{data.boxes_amount}");
                 }
                 else
                 {
@@ -115,8 +121,8 @@ namespace Autofarm.Cubes
             }
             else
             {
-                Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode} phrase:{response.ReasonPhrase}");
-                waitMilliSeconds = new Random().Next(900, 1100);
+                Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode}");
+                waitMilliSeconds = new Random().Next(2000, 3200);
             }
             return waitMilliSeconds;
         }

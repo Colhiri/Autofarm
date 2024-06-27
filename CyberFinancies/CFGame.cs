@@ -1,21 +1,19 @@
-﻿using System.Net.Http.Json;
-using Autofarm.PocketFI.Responses;
+﻿using System.Text.Json;
+
 using Autofarm.Сommon;
 using Autofarm.Сommon.DataBase;
+using Autofarm.Cubes.Responses;
+using System.Net.Http.Json;
+using System.Runtime.InteropServices;
+using System.Net;
 
-namespace Autofarm.PocketFI
+namespace Autofarm.CyberFinancies
 {
     /*
     ### Запуск майнера возможен без какого-то ни было запуска самого окна
     ### нужен только токен самого пользователя в игре
-    ### В pocketFI в каждый запрос передаются метаданные о пользователе телеграмма, которые гораздо более приоритетные
-    ### чем передаваемый ID USER
-    ### В качестве токена в POCKET FI выступают заголовки с передаваемыми данными
-    ### Смысл в том, что при заходе в pocketFI формируется auth_time, query_id, hash
-    ### по-хорошему они должны меняться со временем
     */
-
-    public class PocketFIGame : IGame
+    public class CFGame : IGame
     {
         private static readonly HttpClient client = new HttpClient();
         private List<BaseHeader> headers;
@@ -26,8 +24,7 @@ namespace Autofarm.PocketFI
         public List<CheckTokenTasks> checkTokenTasksComplete { get; set; }
         public CheckTokenTasks currentCheck { get; set; } = null;
 
-
-        public PocketFIGame(string nameGame, GameContext gameDB)
+        public CFGame(string nameGame, GameContext gameDB)
         {
             this.nameGame = nameGame;
             this.gameDB = gameDB;
@@ -62,66 +59,71 @@ namespace Autofarm.PocketFI
         {
             // Создаем необходимый header
             client.DefaultRequestHeaders.Clear();
-            // Особенность POCKET FI
-            // Особенность POCKET FI
-            // Особенность POCKET FI
-            client.DefaultRequestHeaders.Add("Telegramrawdata", token.Data.ToString());
-            // Создаем необходимый токен
-            var values = new Dictionary<string, string>
-            {
-                { "", "" }
-            };
-            var content = new FormUrlEncodedContent(values);
-
-            HttpResponseMessage response = null;
-
             // Сколько нужно секунд для повторного запроса
-            int waitMilliSeconds = new Random().Next(120000, 160000);
+            int waitMilliSeconds = new Random().Next(350000, 400000);
+            // Ошибки при работе сериализатора
+            HeaderGame currentHeader = JsonSerializer.Deserialize<HeaderGame>(header.Data);
+            if (currentHeader == null)
+            {
+                throw new Exception("Не назначены заголовки!");
+            }
+            foreach (KeyValuePair<string, string> head in currentHeader)
+            {
+                client.DefaultRequestHeaders.Add(head.Key, head.Value);
+            }
 
+            // Особенность CF
+            // Особенность CF
+            // Особенность CF
+            // Особенность CF
+            client.DefaultRequestHeaders.Add("Authorization", token.Data);
+
+            // Отсылаем запрос
+            HttpResponseMessage response = null;
             // Отсылаем запрос
             try
             {
-                response = await client.PostAsync(url, content);
+                response = await client.GetAsync(url);
             }
             catch (TaskCanceledException ex)
             {
                 Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Timeout 100 seconds -- {ex.Task}");
-                waitMilliSeconds = new Random().Next(30000, 60000);
-            }
-            catch (Exception ex)
-            {
-                Logger.GetInstance().Log(LogLevel.Critical, nameGame, $"Неуправляемая ошибка -- {ex.GetType()}");
-                waitMilliSeconds = new Random().Next(30000, 60000);
+                waitMilliSeconds = new Random().Next(55000, 70000);
             }
 
             // Проверка ответа
             if (response == null)
             {
-                waitMilliSeconds = new Random().Next(30000, 60000);
                 Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"response us null!");
                 return waitMilliSeconds;
             }
+            // Проверка ответа
             if (response.IsSuccessStatusCode)
             {
-                PlayGameResponse? data = await response.Content.ReadFromJsonAsync<PlayGameResponse>();
+                PlayGameResponse? data = null;
+
+                try
+                {
+                    data = await response.Content.ReadFromJsonAsync<PlayGameResponse>();
+
+                }
+                catch
+                {
+                    Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} Ошибка в десериализации респонса");
+                    waitMilliSeconds = new Random().Next(350000, 400000);
+                    return waitMilliSeconds;
+                }
 
                 if (data != null)
                 {
-                    UserMining? result = data.userMining as UserMining;
-                    Logger.GetInstance().Log(LogLevel.Information, nameGame, @$"user:{result.miningAmount} total:{result.gotAmount}");
+                    Logger.GetInstance().Log(LogLevel.Information, nameGame, @$"user:{token.Data} energy:{data.energy} cubes_mined:{data.mined_count}");
                 }
                 else
                 {
                     Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} Data response is null!");
-                    waitMilliSeconds = new Random().Next(60000, 120000);
+                    waitMilliSeconds = new Random().Next(55000, 70000);
                 }
             }
-            else
-            {
-                Logger.GetInstance().Log(LogLevel.Error, nameGame, @$"user:{token.Data} statusCode:{response.StatusCode} phrase:{response.ReasonPhrase}");
-                waitMilliSeconds = new Random().Next(9000, 11000); ;
-            }
-
             return waitMilliSeconds;
         }
 
@@ -153,7 +155,7 @@ namespace Autofarm.PocketFI
 
             for (int accountIndex = 0; accountIndex < tokens.Count; accountIndex++)
             {
-                URL = @"https://bot.pocketfi.org/mining/claimMining";
+                URL = @"https://api.cyberfin.xyz/api/v1/mining/claim";
                 BaseToken token = tokens[accountIndex];
                 BaseUrl url = gameDB.urls.Where(url => url.URL == URL).First();
                 BaseHeader header = url.BaseHeader;
